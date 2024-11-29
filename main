@@ -1,0 +1,265 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Shopping List App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: ShoppingListScreen(),
+    );
+  }
+}
+
+class ShoppingListScreen extends StatefulWidget {
+  @override
+  _ShoppingListScreenState createState() => _ShoppingListScreenState();
+}
+
+class _ShoppingListScreenState extends State<ShoppingListScreen> {
+  // Xaridlar ro'yxatini saqlash uchun o'zgaruvchi
+  List<Map<String, dynamic>> _shoppingList = [];
+
+  // Foydalanuvchi yangi xarid qo'shishi uchun text controller
+  final TextEditingController _controller = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+
+  // Jami qiymatni hisoblash
+  double get _totalPrice {
+    double total = 0.0;
+    for (var item in _shoppingList) {
+      if (item['price'] != null) {
+        total += double.tryParse(item['price']) ?? 0.0; // Narxni qo'shish
+      }
+    }
+    return total;
+  }
+
+  // Yangi xarid qo'shish funksiyasi
+  void _addItem(String item) {
+    if (item.isNotEmpty) {
+      setState(() {
+        _shoppingList.add({
+          'name': item,
+          'isChecked': false, // Yangi qo'shilgan mahsulotni tekshirilmagan deb belgilaymiz
+          'price': null, // Narxni boshlang'ich qiymat sifatida null qilib qo'yamiz
+        });
+      });
+    }
+  }
+
+  // Xaridni ro'yxatdan o'chirish funksiyasi
+  void _removeItem(int index) {
+    setState(() {
+      _shoppingList.removeAt(index);
+    });
+  }
+
+  // Xaridni tekshirilgan deb belgilash (check/uncheck)
+  void _toggleItemCheck(int index) {
+    if (_shoppingList[index]['price'] == null) {
+      // Agar narx hali kiritilmagan bo'lsa, narx kiritish oynasini ko'rsatish
+      _showPriceDialog(index);
+    } else {
+      // Aks holda, mahsulotni "olingan" deb belgilaymiz
+      setState(() {
+        _shoppingList[index]['isChecked'] = !_shoppingList[index]['isChecked'];
+      });
+    }
+  }
+
+  // Mahsulot narxini kiritish uchun dialog oynasini ko'rsatish
+  void _showPriceDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Narxni kiriting'),
+          content: TextField(
+            controller: _priceController,
+            decoration: InputDecoration(hintText: 'Mahsulot narxini kiriting'),
+            keyboardType: TextInputType.number, // Faqat raqam kiritish uchun
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly, // Faqat raqamlar kiritilsin
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                _priceController.clear();
+                Navigator.of(context).pop();
+              },
+              child: Text('Bekor qilish'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_priceController.text.isNotEmpty) {
+                  setState(() {
+                    // Narxni saqlaymiz va mahsulotni tekshirilgan deb belgilaymiz
+                    _shoppingList[index]['price'] = _priceController.text;
+                    _shoppingList[index]['isChecked'] = true;
+                  });
+                  _priceController.clear();
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text('Saqlash'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Mahsulotni o'chirishni tasdiqlash
+  void _showDeleteConfirmationDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('O\'chirishni tasdiqlang'),
+          content: Text('Siz bu mahsulotni o\'chirishni xohlaysizmi?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Bekor qilish'),
+            ),
+            TextButton(
+              onPressed: () {
+                _removeItem(index);  // Mahsulotni ro'yxatdan o'chirish
+                Navigator.of(context).pop();
+              },
+              child: Text('O\'chirish'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Yangi xarid kiritish uchun dialog oynasini ko'rsatish
+  void _showAddItemDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Yangi xarid qo\'shish'),
+          content: TextField(
+            controller: _controller,
+            decoration: InputDecoration(hintText: 'Xarid nomini kiriting'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                _controller.clear();
+                Navigator.of(context).pop();
+              },
+              child: Text('Bekor qilish'),
+            ),
+            TextButton(
+              onPressed: () {
+                _addItem(_controller.text);
+                _controller.clear();
+                Navigator.of(context).pop();
+              },
+              child: Text('Qo\'shish'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Xaridlar ro\'yxati'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: _shoppingList.length,
+              itemBuilder: (context, index) {
+                final item = _shoppingList[index];
+                return AnimatedOpacity(
+                  duration: Duration(milliseconds: 300),
+                  opacity: item['isChecked'] ? 0.5 : 1.0, // Tekshirilgan mahsulotda opacity ni kamaytirish
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 300),
+                    padding: EdgeInsets.all(10),
+                    margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: item['isChecked'] ? Colors.green.shade100 : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        item['name'],
+                        style: TextStyle(
+                          color: item['isChecked'] ? Colors.grey : Colors.black, // Tekshirilgan mahsulotda matn rangi o'zgaradi
+                        ),
+                      ),
+                      subtitle: item['price'] != null
+                          ? Text('Narx: ${item['price']} UZS') // Narxni o'zbek so'mida ko'rsatish
+                          : null,
+                      leading: IconButton(
+                        icon: Icon(
+                          item['isChecked'] ? Icons.check_circle : Icons.check_circle_outline,
+                          color: item['isChecked'] ? Colors.green : null,
+                        ),
+                        onPressed: () => _toggleItemCheck(index), // Check/uncheck tugmasi
+                      ),
+                      trailing: item['isChecked']
+                          ? null // Agar mahsulot tekshirilgan bo'lsa, o'chirish tugmasi ko'rsatilmaydi
+                          : IconButton(
+                              icon: Icon(
+                                Icons.delete,
+                                color: Colors.red, // O'chirish tugmasi doim qizil rangda
+                              ),
+                              onPressed: () => _showDeleteConfirmationDialog(index), // O'chirish tasdiqlash oynasini ko'rsatish
+                            ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Jami qiymatni ko'rsatish
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Jami: ${_totalPrice.toStringAsFixed(2)} UZS', // Jami narxni o'zbek so'mida ko'rsatish
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddItemDialog,
+        tooltip: 'Yangi xarid qo\'shish',
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
