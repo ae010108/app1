@@ -5,7 +5,6 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Shopping List App',
@@ -18,7 +17,6 @@ class MyApp extends StatelessWidget {
 }
 
 class ShoppingListScreen extends StatefulWidget {
-  @override
   _ShoppingListScreenState createState() => _ShoppingListScreenState();
 }
 
@@ -88,7 +86,6 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     );
   }
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
